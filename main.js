@@ -10,20 +10,43 @@ const API = {
 
 class Model {
 	constructor() {
-		let _word = []
+		let _word = ''
 		let _guesses = 2
 		let _max_guesses = 21
+		let _numOfHiddenIndex = -1
+		let _hiddenIndexs = []
 		this.getWord = () => _word
 		this.setWord = (word) => (_word = word)
 		this.getGuesses = () => _guesses
 		this.setGuesses = (guesses) => (_guesses = guesses)
 		this.getMaxGuesses = () => _max_guesses
 		this.setMaxGuesses = (max_guesses) => (_max_guesses = max_guesses)
+		this.getNumOfHiddenIndex = () => _numOfHiddenIndex
+		this.setNumOfHiddenIndex = (index) => (_numOfHiddenIndex = index)
+		this.getHiddenIndexs = () => _hiddenIndexs
+		this.setHiddenIndexs = (indexes) => (_hiddenIndexs = indexes)
 	}
 
 	async fetchWord() {
-		const word = await API.getWords()
+		const temp = await API.getWords()
+		const word = temp[0]
+		const numOfHiddenIndex = Math.max(
+			Math.floor(Math.random() * word.length),
+			1
+		)
+		const hiddenIndexes = []
+		for (let i = 0; i < numOfHiddenIndex; i++) {
+			let index = Math.floor(Math.random() * word.length)
+			while (hiddenIndexes.includes(index)) {
+				index = Math.floor(Math.random() * word.length)
+			}
+			hiddenIndexes.push(index)
+		}
 		this.setWord(word)
+		this.setHiddenIndexs(hiddenIndexes)
+		this.setNumOfHiddenIndex(numOfHiddenIndex)
+		console.log('model init hiddenIndexs: ', this.getHiddenIndexs())
+		console.log('model init numOfHiddenIndex: ', this.getNumOfHiddenIndex())
 	}
 }
 
@@ -42,8 +65,18 @@ class View {
 	update_max_guesses(max_guesses) {
 		this.max_guesses.innerHTML = max_guesses
 	}
-	update_guessing_display(word) {
-		this.guessing_display.innerHTML = word
+	update_guessing_display(word, hiddenIndexs) {
+		console.log('viewL word: ', word)
+		let temp = word
+		let displayWord = ''
+		for (let i = 0; i < temp.length; i++) {
+			if (hiddenIndexs.includes(i)) {
+				displayWord += '_'
+			} else {
+				displayWord += temp[i]
+			}
+		}
+		this.guessing_display.innerHTML = displayWord
 	}
 }
 
@@ -53,11 +86,37 @@ class Controller {
 		this.view = view
 	}
 	async init() {
-		await this.model.fetchWord().then(() => {})
+		await this.model
+			.fetchWord()
+			.then(() => {
+				this.view.update_guessing_display(
+					this.model.getWord(),
+					this.model.getHiddenIndexs()
+				)
+			})
+			.then(() => console.log(app.model.getNumOfHiddenIndex()))
+			.then(() => console.log(app.model.getHiddenIndexs()))
 		this.view.update_guess_count(this.model.getGuesses())
 		this.view.update_max_guesses(this.model.getMaxGuesses())
-		this.view.update_guessing_display(this.model.getWord())
+
 		this.new_game_btn()
+		this.guess_input()
+	}
+
+	guess_input() {
+		this.view.guess_input.addEventListener('input', () => {
+			const value = this.view.guess_input.value
+			if (value.length > 1) {
+				this.view.guess_input.value = value[value.length - 1]
+			}
+		})
+
+		this.view.guess_input.addEventListener('keypress', (e) => {
+			if (e.key === 'Enter') {
+				console.log(this.view.guess_input.value, 'enter pressed')
+				this.view.guess_input.value = ''
+			}
+		})
 	}
 
 	new_game_btn() {
@@ -65,10 +124,18 @@ class Controller {
 			console.log('new game')
 			this.model.setGuesses(0)
 			this.view.update_guess_count(this.model.getGuesses())
-			this.view.update_guessing_display(this.model.getWord())
-			this.model.fetchWord().then(() => {
-				this.view.update_guessing_display(this.model.getWord())
-			})
+			this.model
+				.fetchWord()
+				.then(() => {
+					this.view.update_guessing_display(
+						this.model.getWord(),
+						this.model.getHiddenIndexs()
+					)
+				})
+				.then(() => console.log(app.model.getNumOfHiddenIndex()))
+				.then(() => {
+					console.log(this.model.getHiddenIndexs())
+				})
 		})
 	}
 }
