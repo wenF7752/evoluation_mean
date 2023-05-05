@@ -177,7 +177,22 @@ class Controller {
 				if (this.model.getGuesses() === this.model.getMaxGuesses()) {
 					this.view.update_guess_count(this.model.getGuesses())
 					const wordGuessed = this.model.getGuessedWords()
-					alert(`Game over! You have guessed ${wordGuessed} words!`)
+					setTimeout(() => {
+						alert(
+							`Game over! You have guessed ${wordGuessed} words!`
+						)
+					}, 100)
+
+					this.view.update_guess_count(this.model.getGuesses())
+					this.model.fetchWord().then(() => {
+						this.view.update_guessing_display(
+							this.model.getWord(),
+							this.model.getHiddenIndexs()
+						)
+						this.model.setGuesses(0)
+						this.model.setGuessedWords(0)
+						this.view.update_guess_count(this.model.getGuesses())
+					})
 				}
 			}
 		})
@@ -187,6 +202,7 @@ class Controller {
 		this.view.new_game_btn.addEventListener('click', () => {
 			console.log('new game')
 			this.model.setGuesses(0)
+			this.model.setGuessedWords(0)
 			this.view.update_guess_count(this.model.getGuesses())
 			this.model
 				.fetchWord()
