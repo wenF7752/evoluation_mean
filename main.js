@@ -73,13 +73,14 @@ class View {
 		this.guessing_display = document.getElementById('guessing-display')
 		this.guessed_letters = document.getElementById('guessed-letters')
 		this.timer_display = document.getElementById('timer-display')
+		this.hint_btn = document.getElementById('hint-btn')
 	}
 
 	update_guess_count(guesses) {
 		this.guess_count.innerHTML = guesses
 	}
 	update_max_guesses(max_guesses) {
-		this.max_guesses.innerHTML = max_guesses
+		this.max_guesses.innerHTML = '/' + max_guesses
 	}
 	update_guessing_display(word, hiddenIndexs) {
 		console.log('viewL word: ', word)
@@ -118,22 +119,19 @@ class Controller {
 		this.time_remaining = 60
 	}
 	async init() {
-		await this.model
-			.fetchWord()
-			.then(() => {
-				this.view.update_guessing_display(
-					this.model.getWord(),
-					this.model.getHiddenIndexs()
-				)
-			})
-			.then(() => {
-				this.view.update_guess_count(this.model.getGuesses())
-				this.view.update_max_guesses(this.model.getMaxGuesses())
-			})
+		await this.model.fetchWord().then(() => {
+			this.view.update_guessing_display(
+				this.model.getWord(),
+				this.model.getHiddenIndexs()
+			)
+			this.view.update_guess_count(this.model.getGuesses())
+			this.view.update_max_guesses(this.model.getMaxGuesses())
+		})
 
 		this.new_game_btn()
 		this.guess_input()
 		this.start_timer()
+		this.hint_btn()
 	}
 
 	guess_input() {
@@ -242,12 +240,7 @@ class Controller {
 						this.model.getGuesses() === this.model.getMaxGuesses()
 					) {
 						//display game over message
-						const wordGuessed = this.model.getGuessedWords()
-						setTimeout(() => {
-							alert(
-								`Game over! You have guessed ${wordGuessed} words!`
-							)
-						}, 100)
+						this.new_game_alert()
 						//reset game
 						this.new_game()
 					}
@@ -266,9 +259,10 @@ class Controller {
 		this.timer = setInterval(() => {
 			this.time_remaining -= 1
 			this.view.update_timer_display(this.time_remaining)
+			console.log(this.time_remaining)
 
-			if (this.time_remaining <= 0) {
-				clearInterval(this.timer)
+			if (this.time_remaining === 0) {
+				this.new_game_alert()
 				this.new_game()
 			}
 		}, 1000)
@@ -282,13 +276,6 @@ class Controller {
 
 	new_game() {
 		console.log('new game')
-		// const wordGuessed = this.model.getGuessedWords()
-		// setTimeout(() => {
-		// 	alert(`Game over! You have guessed ${wordGuessed} words!`)
-		// }, 100)
-		this.model.setGuesses(0)
-		this.model.setGuessedWords(0)
-		this.view.update_guess_count(this.model.getGuesses())
 		this.model.fetchWord().then(() => {
 			this.view.update_guessing_display(
 				this.model.getWord(),
@@ -296,8 +283,19 @@ class Controller {
 			)
 			this.model.setGuessedLetters([])
 			this.view.update_guessed_letters(this.model.getGuessedLetters())
+			this.model.setGuesses(0)
+			this.model.setGuessedWords(0)
+			this.view.update_guess_count(this.model.getGuesses())
+			this.reset_timer()
 		})
-		this.reset_timer()
+	}
+	new_game_alert() {
+		this.view.update_guess_count(this.model.getGuesses())
+		//display game over message
+		const wordGuessed = this.model.getGuessedWords()
+		setTimeout(() => {
+			alert(`Game over! You have guessed ${wordGuessed} words!`)
+		}, 100)
 	}
 }
 
