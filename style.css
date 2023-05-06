@@ -8,6 +8,7 @@
 *::after {
 	margin: 0;
 	padding: 0;
+    box-sizing: border-box;
 }
 
 body {
@@ -30,6 +31,7 @@ body {
 .new-game {
 	color: #fff;
 	background-color: var(--button-color);
+    text-decoration: bold;
 	border: none;
 	height: 2rem;
 	width: 10rem;
@@ -58,4 +60,17 @@ span {
 .letter-input:focus {
     border-color: #eb35e6;
     box-shadow: 0 0 2px #eb35e6;
+}
+
+#guessed-letters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+.correct{
+    color: green;
+}
+.incorrect{
+    color: red;
 }
