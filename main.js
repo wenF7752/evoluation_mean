@@ -1,5 +1,4 @@
 const URL = 'https://random-word-api.herokuapp.com/word'
-
 const API = {
 	async getWords() {
 		const response = await fetch(URL)
@@ -7,32 +6,26 @@ const API = {
 		return data
 	}
 }
-
 class Model {
 	constructor() {
 		let _word = ''
 		let _guesses = 0
 		let _max_guesses = 10
-		let _numOfHiddenIndex = 0
-		let _hiddenIndexs = []
-		let _hiddenLetters = []
 		let _guessedwords = 0
 		let _guessedLetters = []
+		let _hiddenIndeAndLetter = []
 		this.getWord = () => _word
 		this.setWord = (word) => (_word = word)
 		this.getGuesses = () => _guesses
 		this.setGuesses = (guesses) => (_guesses = guesses)
 		this.getMaxGuesses = () => _max_guesses
-		this.getNumOfHiddenIndex = () => _numOfHiddenIndex
-		this.setNumOfHiddenIndex = (index) => (_numOfHiddenIndex = index)
-		this.getHiddenIndexs = () => _hiddenIndexs
-		this.setHiddenIndexs = (indexes) => (_hiddenIndexs = indexes)
-		this.setHiddenLetters = (letters) => (_hiddenLetters = letters)
-		this.getHiddentLetters = () => _hiddenLetters
 		this.getGuessedWords = () => _guessedwords
 		this.setGuessedWords = (words) => (_guessedwords = words)
 		this.getGuessedLetters = () => _guessedLetters
 		this.setGuessedLetters = (letters) => (_guessedLetters = letters)
+		this.gethiddenIndeAndLetter = () => _hiddenIndeAndLetter
+		this.sethiddenIndeAndLetter = (hiddenIndeAndLetter) =>
+			(_hiddenIndeAndLetter = hiddenIndeAndLetter)
 	}
 
 	async fetchWord() {
@@ -44,23 +37,19 @@ class Model {
 			Math.floor(Math.random() * word.length),
 			1
 		)
-		let hiddenIndexes = []
-		let hiddentLetters = []
+		let hiddenIndeAndLetter = []
 		for (let i = 0; i < numOfHiddenIndex; i++) {
 			//generate random index from 0 ~ word.length
 			let index = Math.floor(Math.random() * word.length)
 			//make sure index is not repeated
-			while (hiddenIndexes.includes(index)) {
+			while (hiddenIndeAndLetter.some((item) => item.index === index)) {
 				index = Math.floor(Math.random() * word.length)
 			}
-			hiddenIndexes.push(index)
-			hiddentLetters.push(word[index])
+			hiddenIndeAndLetter.push({ index: index, letter: word[index] })
 		}
 		this.setWord(word)
-		this.setHiddenIndexs(hiddenIndexes)
-		this.setNumOfHiddenIndex(numOfHiddenIndex)
-		this.setHiddenLetters(hiddentLetters)
-		console.log('model init numOfHiddenIndex: ', this.getNumOfHiddenIndex())
+		this.sethiddenIndeAndLetter(hiddenIndeAndLetter)
+		console.log('word:', word)
 	}
 }
 
@@ -73,7 +62,7 @@ class View {
 		this.guessing_display = document.getElementById('guessing-display')
 		this.guessed_letters = document.getElementById('guessed-letters')
 		this.timer_display = document.getElementById('timer-display')
-		this.hint_btn = document.getElementById('hint-btn')
+		// this.hint_btn = document.getElementById('hint-btn')
 	}
 
 	update_guess_count(guesses) {
@@ -82,15 +71,13 @@ class View {
 	update_max_guesses(max_guesses) {
 		this.max_guesses.innerHTML = '/' + max_guesses
 	}
-	update_guessing_display(word, hiddenIndexs) {
-		console.log('viewL word: ', word)
-		let temp = word
+	update_guessing_display(word, hiddenIndexAndLetter) {
 		let displayWord = ''
-		for (let i = 0; i < temp.length; i++) {
-			if (hiddenIndexs.includes(i)) {
+		for (let i = 0; i < word.length; i++) {
+			if (hiddenIndexAndLetter.some((item) => item.index === i)) {
 				displayWord += '_' + ' '
 			} else {
-				displayWord += temp[i] + ' '
+				displayWord += word[i] + ' '
 			}
 		}
 		this.guessing_display.innerHTML = displayWord
@@ -110,7 +97,6 @@ class View {
 		this.timer_display.innerHTML = `${time}s`
 	}
 }
-
 class Controller {
 	constructor(model, view) {
 		this.model = model
@@ -122,16 +108,15 @@ class Controller {
 		await this.model.fetchWord().then(() => {
 			this.view.update_guessing_display(
 				this.model.getWord(),
-				this.model.getHiddenIndexs()
+				this.model.gethiddenIndeAndLetter()
 			)
+			console.log(this.model.getWord())
 			this.view.update_guess_count(this.model.getGuesses())
 			this.view.update_max_guesses(this.model.getMaxGuesses())
 		})
-
 		this.new_game_btn()
 		this.guess_input()
 		this.start_timer()
-		this.hint_btn()
 	}
 
 	guess_input() {
@@ -145,12 +130,8 @@ class Controller {
 		//if enter is pressed, check if guess is correct
 		this.view.guess_input.addEventListener('keypress', (e) => {
 			if (e.key === 'Enter') {
-				const guessIndexs = []
 				const guess = this.view.guess_input.value
-				const word = this.model.getWord()
-				const hiddenIndexs = this.model.getHiddenIndexs()
-				let hiddenLetters = this.model.getHiddentLetters()
-				let guessIndex = word.indexOf(guess)
+				const hiddenIndexAndLetter = this.model.gethiddenIndeAndLetter()
 				let guessedletters = this.model.getGuessedLetters()
 
 				//check for duplicate guess
@@ -158,54 +139,37 @@ class Controller {
 					alert('You already guessed this letter!')
 					this.view.guess_input.value = ''
 				} else {
-					if (hiddenLetters.includes(guess)) {
+					if (
+						//check if guess is correct
+						hiddenIndexAndLetter.some(
+							(letter) => letter.letter === guess
+						)
+					) {
 						//push the guess to guessedletters
 						guessedletters.push({
 							letter: guess,
 							correct: true
 						})
 						//remove the guess from hiddenLetters
-						let hiddenLettersRemoved = hiddenLetters.filter(
-							(letter) => {
-								return letter !== guess
-							}
-						)
-						this.model.setHiddenLetters(hiddenLettersRemoved)
-						hiddenLetters = this.model.getHiddentLetters()
-						while (guessIndex !== -1) {
-							guessIndexs.push(guessIndex)
-							guessIndex = word.indexOf(guess, guessIndex + 1)
-						}
-						if (guessIndexs.length > 0) {
-							guessIndexs.forEach((index) => {
-								if (hiddenIndexs.includes(index)) {
-									hiddenIndexs.splice(
-										hiddenIndexs.indexOf(index),
-										1
-									)
-								}
+						let hiddenIndexAndLetterRemoved =
+							hiddenIndexAndLetter.filter((letter) => {
+								return letter.letter !== guess
 							})
-							this.model.setHiddenIndexs(hiddenIndexs)
-							this.view.update_guessing_display(
-								word,
-								hiddenIndexs
-							)
-							console.log('hiddenLetters: ', hiddenLetters)
-						}
-
+						//update model with new hiddenIndexAndLetter
+						this.model.sethiddenIndeAndLetter(
+							hiddenIndexAndLetterRemoved
+						)
 						//if all letters are guessed
-						if (this.model.getHiddenIndexs().length === 0) {
+						if (this.model.gethiddenIndeAndLetter().length === 0) {
 							//increment guessed words and update view
 							this.model.setGuessedWords(
 								this.model.getGuessedWords() + 1
 							)
-							//reset guessed letters
-							this.model.setGuessedLetters([])
 							//update view with new word and guessed letters after correct guessed word
 							this.model.fetchWord().then(() => {
 								this.view.update_guessing_display(
 									this.model.getWord(),
-									this.model.getHiddenIndexs()
+									this.model.gethiddenIndeAndLetter()
 								)
 								this.model.setGuessedLetters([])
 								this.view.update_guessed_letters(
@@ -217,20 +181,22 @@ class Controller {
 						//wrong guess increment guesses and update view
 						this.model.setGuesses(this.model.getGuesses() + 1)
 						this.view.update_guess_count(this.model.getGuesses())
-
 						//push the wrong guess to guessedletters
 						guessedletters.push({
 							letter: guess,
 							correct: false
 						})
-
-						console.log('hiddenLetters: ', hiddenLetters)
 					}
-
-					//update view with guessed letters
+					//update model with new guessedletters correct or incorrect
 					this.model.setGuessedLetters(guessedletters)
+					//update view with new guessedletters correct or incorrect
 					this.view.update_guessed_letters(
 						this.model.getGuessedLetters()
+					)
+					//update view with gussed letters
+					this.view.update_guessing_display(
+						this.model.getWord(),
+						this.model.gethiddenIndeAndLetter()
 					)
 					//clear input
 					this.view.guess_input.value = ''
@@ -259,7 +225,6 @@ class Controller {
 		this.timer = setInterval(() => {
 			this.time_remaining -= 1
 			this.view.update_timer_display(this.time_remaining)
-			console.log(this.time_remaining)
 
 			if (this.time_remaining === 0) {
 				this.new_game_alert()
@@ -279,7 +244,7 @@ class Controller {
 		this.model.fetchWord().then(() => {
 			this.view.update_guessing_display(
 				this.model.getWord(),
-				this.model.getHiddenIndexs()
+				this.model.gethiddenIndeAndLetter()
 			)
 			this.model.setGuessedLetters([])
 			this.view.update_guessed_letters(this.model.getGuessedLetters())
@@ -298,7 +263,5 @@ class Controller {
 		}, 100)
 	}
 }
-
 const app = new Controller(new Model(), new View())
-
 app.init()
